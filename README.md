@@ -213,27 +213,33 @@ El DAG `reliable_music_pipeline` utiliza TaskFlow API:
 | **Problemas Transitorios de Red/BD** | Alta | Falla `extract_grammys` o `load_dw` (interacción externa). | **Sí (`retries=2`, `retry_delay=3m`)** | Caídas temporales de la base de datos o latencia de red pueden superarse tras unos minutos sin cambiar el código ni la data. |
 | **Regla DQ Fallida (Deterministic)** | Critical | Tarea `validate_*` lanza error y bloquea el DAG aguas abajo. | **No (`retries=0`)** | Una falla de esquema o valores atípicos es determinística; no pasará mágicamente al reintentar sin arreglar el origen. |
 
+
 ## 12. Evidencia de Ejecución Exitosa (Test A)
 
-El pipeline ha demostrado orquestar exitosamente datos limpios hacia el entorno `music_dw`:
+El pipeline ha demostrado orquestar exitosamente datos limpios hacia el entorno `music_dw`. Como se observa en la siguiente captura, las 7 tareas configuradas en la vista Graph/Grid finalizaron en estado **success** (verde), indicando que las validaciones de Great Expectations pasaron sin reglas Críticas fallidas, y la carga dimensional se completó transaccionalmente:
 
+![Test A Success](docs/evidence/airflow/test_a_success.png)
 
 ### 12.1 Registro de Evidencias (Reliability Evidence Register)
 
-| ID Evidencia | Ejecución / Tarea | Artefacto o Ruta | Qué demuestra |
-| --- | --- | --- | --- |
-| **E-01** | `validate_raw_*` | `docs/evidence/validation/A_baseline/` | Aprobación de Quality Gates en ejecución exitosa. |
-| **E-02** | `validate_raw_spotify` | `docs/evidence/airflow/test_b_failure.png` | Bloqueo efectivo del DAG ante reglas críticas (Test B). |
-| **E-03** | `transform_integrate` | `docs/evidence/transform/*/reconciliation.json` | Invariantes de transformación e integridad mantenidos. |
-| **E-04** | Orquestador | `docs/evidence/airflow/test_a_success.png` | Orquestación correcta y estado de red. |
-| **E-05** | `load_dw` | `docs/evidence/rerun/rerun_comparison.md` | Idempotencia y repetibilidad segura (Safe Rerun). |
+| ID Evidencia | Ejecución / Tarea | Artefacto o Ruta | Qué demuestra | Related Policy / Rule |
+| --- | --- | --- | --- | --- |
+| **E-01** | `validate_raw_*` | `docs/evidence/validation/A_baseline/` | Aprobación de Quality Gates en ejecución exitosa. | `Critical Policy` |
+| **E-02** | `validate_raw_spotify` | `docs/evidence/airflow/test_b_failure.png` | Bloqueo efectivo del DAG ante reglas críticas (Test B). | `DQ03: Critical` |
+| **E-03** | `transform_integrate` | `docs/evidence/transform/*/reconciliation.json` | Invariantes de transformación e integridad mantenidos. | N/A (Transformation invariant) |
+| **E-04** | Orquestador | `docs/evidence/airflow/test_a_success.png` | Orquestación correcta y estado de red. | `DAG Flow Policy` |
+| **E-05** | `load_dw` | `docs/evidence/rerun/rerun_comparison.md` | Idempotencia y repetibilidad segura (Safe Rerun). | N/A (Idempotency invariant) |
+
 
 ## 13. Evidencia de Falla Controlada (Test B)
 
-Al inyectar intencionalmente una pista con `popularity = 150` (violando DQ03) en `spotify_bad.csv`, la tarea `validate_raw_spotify` cambia a estado **failed** y bloquea la propagación de datos corruptos al DW (**upstream_failed**).
+Al inyectar intencionalmente una pista con `popularity = 150` (violando DQ03) en `spotify_bad.csv`, la tarea `validate_raw_spotify` cambia a estado **failed** (rojo) y bloquea la propagación de datos corruptos al DW (**upstream_failed** naranja). Esta captura demuestra la efectividad de la política de severidad que protege al modelo dimensional:
+
+![Test B Failure](docs/evidence/airflow/test_b_failure.png)
+
+![Test B Failure](docs/evidence/airflow/test_b_failure1.png)
 
 * Log de falla y reglas de GX documentadas en `docs/evidence/validation/`.
-
 
 ## 14. Estrategia de Repetibilidad (Safe Rerun)
 
@@ -246,11 +252,11 @@ La operación `load_dw` es estrictamente idempotente para evitar silenciosos dup
 
 ## 15. Dashboard y Salidas Analíticas
 
-Resultados extraídos directamente del Data Warehouse mediante las vistas en `sql/kpi_queries.sql` (Visualizaciones de Power BI en proceso):
+Resultados extraídos directamente del Data Warehouse mediante las vistas en `sql/kpi_queries.sql` :
 
 * **R1 (Popularidad):**
 * *Lectura incluyendo ceros:* 32.84 (Grammy) vs 33.49 (Sin presencia Grammy). La proporción de pistas con popularidad 0 es muy alta en el grupo premiado (24.37%) frente al otro (9.77%).
-* *Lectura excluyendo ceros (reproducción real):* Los artistas Grammy promedian **43.42** de popularidad frente a **37.11** del resto.
+* *Lectura excluyendo ceros - reproducción real:* Los artistas Grammy promedian **43.42** de popularidad frente a **37.11** del resto.
 * *Catálogo:* El 9.36% de las pistas únicas cuenta con la participación de un artista galardonado.
 
 
