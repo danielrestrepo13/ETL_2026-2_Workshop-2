@@ -6,11 +6,29 @@
 
 ---
 
-## 1. Descripción de la Arquitectura y Fuentes
+## 1. Problema y Objetivo Analítico
+El objetivo de este proyecto académico es diseñar y construir un pipeline de datos batch confiable, resiliente e idempotente[cite: 19]. Este pipeline integra dos fuentes de datos heterogéneas (un archivo CSV del catálogo de Spotify y una base de datos relacional de los premios Grammy)[cite: 19] para alimentar un Data Warehouse analítico con modelo en estrella en PostgreSQL (`music_dw`)[cite: 19]. La meta principal es responder a preguntas de negocio sobre la relación entre el reconocimiento en los premios Grammy y la popularidad o características acústicas de las pistas en Spotify[cite: 19].
 
-El objetivo de este proyecto es construir un pipeline de datos batch confiable, resiliente e idempotente que integra dos fuentes heterogéneas para alimentar un Data Warehouse analítico con modelo en estrella en PostgreSQL (`music_dw`), respondiendo a preguntas de negocio sobre la relación entre el reconocimiento en los premios Grammy y la popularidad/características acústicas en Spotify.
+## 2. Requerimientos Analíticos (R1, R2, R3)
+El pipeline fue diseñado para soportar los siguientes requerimientos, los cuales demandan información combinada de ambas fuentes[cite: 22]:
 
-```
+| ID | Requerimiento Analítico | Required Data (Attributo -> Fuente) | Fuentes de Datos | KPIs Esperados | Nivel de Detalle |
+|---|---|---|---|---|---|
+| **R1** | ¿Son los artistas con reconocimiento Grammy más populares en Spotify que los artistas sin este? (Soporta decisiones sobre el alcance de la audiencia) | `artists`, `popularity`, `track_id` -> Spotify; `artist` -> Grammy | Spotify CSV + Grammy DB | **KPI-1a:** Popularidad promedio, artistas Grammy vs no-Grammy.<br>**KPI-1b:** % de pistas del catálogo por artistas Grammy. | Artista |
+| **R2** | ¿Qué géneros concentran a los artistas Grammy y cómo difiere su perfil de audio del resto? (Soporta el posicionamiento a nivel de género) | `track_genre`, `danceability`, `energy`, `valence`, `acousticness` -> Spotify; `artist` -> Grammy | Spotify CSV + Grammy DB | **KPI-2a:** Cantidad de artistas Grammy por género.<br>**KPI-2b:** Promedio de features de audio, Grammy vs no-Grammy, por género. | Género (y flag de Grammy) |
+| **R3** | ¿Tienen los artistas con más premios Grammy una mayor presencia en Spotify y mayor popularidad? (Soporta ranking y benchmarking de artistas) | `artist`, `category`, `year` -> Grammy; `track_id`, `popularity` -> Spotify | Spotify CSV + Grammy DB | **KPI-3a:** # premios, # categorías distintas, año del primer/último premio por artista.<br>**KPI-3b:** # de pistas y popularidad promedio por artista; Top 10. | Artista |
+
+## 3. Fuentes de Datos
+El proyecto integra información de dos orígenes con estructuras y tecnologías diferentes:
+
+1. **Spotify Dataset (`data/raw/spotify_dataset.csv`):** Un archivo plano CSV con 114,000 pistas[cite: 19]. Contiene atributos de audio (`danceability`, `energy`, `valence`, `acousticness`), `popularity`, `artists` (delimitados por `;`) y `track_genre`[cite: 19].
+2. **Grammy Awards Source DB (`grammy_source.public.grammy_awards`):** Una base de datos operacional PostgreSQL (puerto 5433 en contenedor `analytics-postgres`)[cite: 19]. Cuenta con 4,810 registros históricos (1958–2019)[cite: 19]. **La extracción se realiza exclusivamente mediante consultas SQL a esta base de datos fuente**, nunca desde archivos intermedios[cite: 19].
+
+## 4. Arquitectura del Pipeline
+
+El pipeline de orquestación en Airflow sigue la siguiente arquitectura de dependencias:
+
+```text
        +-----------------------+              +------------------------------------+
        |  Spotify Tracks CSV   |              | Grammy Awards (PostgreSQL Source)  |
        |  (114,000 registros)  |              |       (4,810 registros)            |
@@ -51,213 +69,254 @@ El objetivo de este proyecto es construir un pipeline de datos batch confiable, 
                  |            Esquema Estrella ('dw')            |
                  |      Dimensiones + Hechos + Vistas KPI        |
                  +-----------------------------------------------+
-```
-
-### Fuentes de Datos
-1. **Spotify Dataset (`data/raw/spotify_dataset.csv`):**
-   - Catálogo de 114,000 pistas con atributos de audio (`danceability`, `energy`, `valence`, `acousticness`), `popularity`, `artists` (delimitados por `;`) y `track_genre`.
-2. **Grammy Awards Source DB (`grammy_source.public.grammy_awards`):**
-   - Base de datos relacional operacional en PostgreSQL (puerto 5433 / contenedor `analytics-postgres`) con 4,810 registros históricos (1958–2019). **Se extrae exclusivamente mediante consulta SQL relacional**, nunca de archivos planos intermedios.
-
-### Principios de Ingeniería y Confiabilidad
-- **Arquitectura desacoplada:** Las tareas intercambian únicamente metadatos compactos (`batch_id`, rutas Parquet, conteos), nunca DataFrames masivos por el metadata store de Airflow (XCom).
-- **Puertas de calidad (Quality Gates):** Validación estricta con Great Expectations en la capa cruda (`raw`) y en la capa de integración (`prepared`).
-- **Política de Severidad:**
-  - `Critical`: Falla determinística de datos -> Bloqueo inmediato del pipeline (`STOP`). No reintentable.
-  - `Warning`: Alerta registrada en bitácora/JSON -> Permite continuar (`CONTINUE WITH WARNING`).
-- **Estrategia Safe Rerun (Idempotencia):**
-  - Dimensiones: `UPSERT` (`INSERT ... ON CONFLICT DO UPDATE`).
-  - Tablas de hechos: `Truncate-and-Load` en un bloque transaccional atómico (`BEGIN ... TRUNCATE ... INSERT ... COMMIT`). Un fallo durante la carga hace `ROLLBACK` y mantiene intacto el estado previo.
-- **Reintentos selectivos:** Configurados con `retries=2` únicamente en tareas que interactúan con servicios externos (red/base de datos operacional o DW), y `retries=0` en validaciones y transformaciones determinísticas.
-
----
-
-## 2. Requerimientos Analíticos (R1 - R3)
-
-| ID | Requerimiento Analítico | Fuentes Utilizadas | KPIs Asociados |
-|---|---|---|---|
-| **R1** | Comparar la popularidad en Spotify entre artistas con y sin reconocimiento Grammy. | Spotify CSV + Grammy DB | **KPI-1a:** Popularidad media por grupo (con/sin Grammy).<br>**KPI-1b:** Porcentaje del catálogo de pistas con presencia Grammy. |
-| **R2** | Identificar géneros que concentran artistas Grammy y contrastar sus perfiles acústicos. | Spotify CSV + Grammy DB | **KPI-2a:** Cantidad y % de artistas Grammy por género.<br>**KPI-2b:** Medias de audio features (`danceability`, `energy`, etc.) por género y grupo. |
-| **R3** | Evaluar la relación entre volumen de premios Grammy, presencia en Spotify y popularidad. | Spotify CSV + Grammy DB | **KPI-3a:** # premios, categorías distintas y años por artista.<br>**KPI-3b:** # pistas en catálogo y popularidad promedio (Top 10 histórico). |
-
----
-
-## 3. Matriz de Trazabilidad Completa
-
-La siguiente matriz detalla el ciclo de vida de los datos, vinculando requerimientos, riesgos de perfilamiento, reglas de calidad, transformaciones, modelo dimensional y KPIs:
-
-| Req. | Riesgo Calidad | Regla DQ | Expectation GX | Transformación (Decisión) | Elemento en DW | Salida / KPI |
-|---|---|---|---|---|---|---|
-| **R1** | **RK07** (duplicados exactos en Spotify) | **DQ06** (unicidad track-genre) | `ExpectCompoundColumnsToBeUnique(track_id, track_genre, mostly=0.99)` | **T3:** Eliminación de 450 filas duplicadas idénticas. | `dw.dim_track` | KPI-1a, KPI-1b |
-| **R1** | **RK15** (14% de popularidad en 0) | **DQ03** (rango [0, 100]), **DQ07** (monitoreo de ceros) | `ExpectColumnValuesToBeBetween(popularity, 0, 100)` | **T12:** Preservación de ceros en fact; exclusión explícita en métrica principal de vista. | `dw.fact_track_credit` (CHECK constraint), `dw.vw_artist_track` | KPI-1a (`avg_popularity_excl_zero`) |
-| **R1** | **RK14** (artistas delimitados por `;`) | **DQ05** (artistas no nulos) | `ExpectColumnValuesToNotBeNull(artists, mostly=0.999)` | **T5:** Explode/split de artistas por `;` al grano (pista, artista, género). | `dw.fact_track_credit`, `dw.dim_artist` | KPI-1a, KPI-1b |
-| **R1** | **RK22** (carencia de ID compartido entre fuentes) | **DQ14** (clave única de artista), **DQ19** (traslape mínimo) | `ExpectColumnValuesToBeUnique(artist_match_key)`, `ExpectColumnSumToBeBetween(grammy_spotify_overlap, min=30)` | **T9:** Clave de integración normalizada (NFKD unidecode, alfanumérico, casefold). **T10:** Flag `has_grammy_awards`. | `dw.dim_artist.artist_match_key`, `dw.vw_kpi_1a_popularity_by_grammy` | KPI-1a, KPI-1b |
-| **R2** | **RK17** (dominio de audio features) | **DQ04**, **DQ18** (features en [0, 1]) | `ExpectColumnValuesToBeBetween(danceability, 0, 1)`, etc. | Validación de límites; rechazo si viola contrato de dominio. | `dw.fact_track_credit` (CHECK constraints en 4 features) | KPI-2b (`vw_kpi_2b_audio_profile`) |
-| **R2** | **RK13** (género asignado a nivel de fila) | **DQ01** (schema válido), **DQ15** (grano de créditos) | `ExpectCompoundColumnsToBeUnique(track_id, artist_match_key, genre_name)` | **T6:** Deduplicación al grano estricto de la tabla de hechos. | `dw.dim_genre`, `dw.fact_track_credit` | KPI-2a, KPI-2b |
-| **R3** | **RK10** (Grammy sin PK natural) | **DQ09** (unicidad de ID) | `ExpectColumnValuesToBeUnique(source_row_id)` | Asignación de `source_row_id` operacional como clave degenerada `award_id`. | `dw.fact_grammy_award.award_id` | KPI-3a |
-| **R3** | **RK11** (100% registros Grammy son ganadores) | **DQ12** (`winner` es True) | `ExpectColumnValuesToBeInSet(winner, [True])` | **T13:** Se descarta columna redundante `winner` y la medida es `award_count = 1`. | `dw.fact_grammy_award.award_count` (CHECK = 1) | KPI-3a, KPI-3b |
-| **R3** | **RK05** (38% premios sin artista en origen) | **DQ13** (artista en Grammy), **DQ17** (clave no nula) | `ExpectColumnValuesToNotBeNull(artist, mostly=0.50)` | **T8:** Mapeo a miembro especial `__unknown__` (`artist_key = -1`) para no perder premios. | `dw.dim_artist` (registro -1), `dw.fact_grammy_award` | KPI-3a (filtrado por `artist_type = 'REAL'`) |
-| **R3** | **RK23** (colaboraciones en cadena única Grammy) | **DQ16** (grano de hechos de premios) | `ExpectCompoundColumnsToBeUnique(award_id, artist_match_key)` | **T7:** Split condicional de colaboraciones solo con evidencia en Spotify. | `dw.fact_grammy_award` | KPI-3a, KPI-3b |
-| **R3** | **RK25** (créditos a nombres genéricos) | **DQ17** (tipo de artista restringido) | `ExpectColumnValuesToBeInSet(artist_type, ['REAL', 'PLACEHOLDER', 'UNKNOWN'])` | **T8:** Mapeo a miembro `__placeholder__` (`artist_key = -2`) para evitar distorsiones en el ranking. | `dw.dim_artist` (registro -2) | KPI-3a/3b (`vw_kpi_3_artist_ranking`) |
-
----
-
-## 4. Estructura del Repositorio
 
 ```
-ETL_2026-2_Workshop-2/
-├── dags/
-│   └── reliable_music_pipeline.py    # DAG de Airflow 3.1.8 (TaskFlow API, gates, reintentos)
-├── data/
-│   ├── raw/
-│   │   ├── spotify_dataset.csv       # Archivo crudo fuente de Spotify
-│   │   └── the_grammy_awards.csv     # CSV original usado para inicializar la BD relacional
-│   └── staging/                      # Parquet por lote intercambiado entre tareas (ignorado en git)
-├── docs/
-│   ├── evidence/                     # Evidencias generadas de profiling, transform y validation
-│   ├── quality_rules.md              # Catálogo formal de reglas DQ01-DQ20
-│   ├── requirements.md               # Definición formal de alcance analítico y requerimientos
-│   └── transformation_decisions.md   # Registro de decisiones de ingeniería T1-T13
-├── sql/
-│   ├── dw_schema.sql                 # DDL del modelo estrella en PostgreSQL (esquema 'dw')
-│   ├── kpi_queries.sql               # Vistas SQL analíticas para KPIs de R1, R2 y R3
-│   └── source_setup.sql              # DDL de la BD operacional de origen de Grammy
-├── src/
-│   ├── config.py                     # Configuración de rutas y conexiones DB (híbrido local/Docker)
-│   ├── controlled_failure.py         # Generador de datos corruptos para Test B (falla controlada)
-│   ├── extract.py                    # Extracción desacoplada hacia staging Parquet
-│   ├── load.py                       # Carga a DW: UPSERT en dimensiones y Truncate-and-Load en facts
-│   ├── load_grammy_source.py         # Inicialización de la BD fuente operacional (Postgres)
-│   ├── run_local_pipeline.py         # Ejecución local de punta a punta (6 etapas)
-│   ├── run_validation_checks.py      # Batería de pruebas de validación cruda (escenarios A, B, C)
-│   ├── transform.py                  # Lógica de transformación, integración y reconciliación
-│   └── validation.py                 # Suites Great Expectations y ejecución de checkpoints
-└── requirements.txt                  # Dependencias del proyecto
+
+## 5. Hallazgos del Perfilamiento de Datos
+
+A través del análisis descriptivo de las fuentes, se identificaron los siguientes riesgos (RK) para la calidad e integración de los datos:
+
+* **(RK07) Duplicados:** 450 filas duplicadas idénticas en Spotify.
+
+* **(RK15) Valores anómalos:** El 14% de las pistas en Spotify presentan popularidad `0`.
+
+* **(RK14) Granularidad de artistas (Spotify):** El 26% de las filas de Spotify agrupan artistas delimitados por `;`.
+
+* **(RK05) Datos faltantes (Grammy):** 38% (1,840 filas) de los registros de premios Grammy no tienen artista asignado (ej. premios técnicos).
+
+* **(RK23) Granularidad de colaboraciones (Grammy):** Solo el 7% de las colaboraciones coinciden directamente; la mayoría requiere una separación de los nombres para cruzar correctamente con Spotify.
+
+* **(RK25) Créditos genéricos:** Existencia de valores como "Various Artists" o "Original Cast" en 69 filas de los Grammy, que no corresponden a individuos reales y distorsionan los rankings.
+
+* **(RK22) Ausencia de clave primaria compartida:** Las dos fuentes solo pueden conectarse mediante el nombre del artista, lo que genera riesgos de traslape.
+
+* **(RK11) Columna constante:** La columna `winner` de los Grammy es siempre `True` en el 100% de los casos (4,810 filas), por lo que contar la fila es equivalente a contar el premio.
+
+## 6. Riesgos y Reglas de Calidad
+
+| Regla ID | Dimensión | Descripción de la Regla | Severidad |
+| --- | --- | --- | --- |
+| **DQ01** | Validez (schema) | Todas las columnas necesarias (100%) están presentes en Spotify. | Critical |
+| **DQ02** | Completitud | `track_id` nunca es nulo (100%). | Critical |
+| **DQ03** | Validez | `popularity` está entre 0 y 100. | Critical |
+| **DQ04** | Validez | Los cuatro *audio features* de R2 están en el rango de 0 a 1. | Critical |
+| **DQ05** | Completitud | `artists` no es nulo (tolerancia hasta >= 99.9%). | Warning |
+| **DQ06** | Unicidad | Un par (`track_id`, `track_genre`) aparece solo una vez (tolerancia >= 99%). | Warning |
+| **DQ07** | Validez (monitor.) | Monitoreo: La mayoría de las filas tienen popularidad >= 1 (>= 80%). | Informational |
+| **DQ08** | Validez (schema) | Todas las columnas necesarias de Grammy están presentes. | Critical |
+| **DQ09** | Unicidad | `source_row_id` es único (100%) en la fuente Grammy. | Critical |
+| **DQ10** | Validez | El año del premio Grammy está entre 1950 y 2100. | Critical |
+| **DQ11** | Completitud | La categoría del Grammy nunca es nula. | Critical |
+| **DQ12** | Validez (origen) | La columna `winner` es siempre `True` (100%). | Critical |
+| **DQ13** | Completitud | El artista está presente en la fuente Grammy (>= 50%). | Warning |
+| **DQ14** | Unicidad | `artist_match_key` es único en la dimensión (100%). | Critical |
+| **DQ15** | Unicidad | El grano (track, artista, género) de Spotify es único (100%). | Critical |
+| **DQ16** | Unicidad | El grano (premio, artista) de los Grammy es único (100%). | Critical |
+| **DQ17** | Validez/Complet. | Clave de artista no nula, tipo válido (`REAL`, `PLACEHOLDER`, `UNKNOWN`). | Critical |
+| **DQ18** | Validez | Medidas no nulas en fact, `popularity` en 0-100, *audio features* en 0-1. | Critical |
+| **DQ19** | Integración | Existe un traslape mínimo (>= 30 artistas presentes en ambas fuentes). | Critical |
+| **DQ20** | Integración | Razonable proporción (>= 33%) de artistas Grammy reales ubicados en Spotify. | Warning |
+
+## 7. Diseño de Validación (Great Expectations)
+
+El control automatizado de datos se realiza en dos etapas (Raw y Prepared Gates) usando **Great Expectations**:
+
+* **Diseño:** Los objetos de datos se estructuran como DataFrames (Assets), validados por un `Expectation Suite` a través de un `Validation Definition` ejecutado por un `Checkpoint` en cada nodo del DAG. Las suites incluyen reglas críticas (`spotify_raw_suite`, `grammy_raw_suite`, etc.).
+
+* **Política de severidad:** Si falla una validación con nivel **Critical**, el Checkpoint lanza un `DataQualityError` que detiene (STOP) todo el flujo aguas abajo. Las fallas de nivel **Warning** registran una alerta (CONTINUE WITH WARNING) pero permiten continuar, asegurando observabilidad. Los resultados y evidencias (JSON) de la corrida se preservan localmente para auditoría.
+
+## 8. Estrategia de Transformación e Integración
+
+La fase `transform_and_integrate` asienta el contrato de integración sin modificar datos solo para satisfacer validaciones previas.
+
+**Reglas Destacadas (T1-T13):**
+
+* **T3 y T6 (Deduplicación):** Se remueven los 450 duplicados idénticos en Spotify y se fuerza el grano estricto de *(track, artista, género)*.
+
+* **T5 (Spotify):** Se hace *explode* del campo `artists` separándolo por `;` para dejar un artista por fila.
+
+* **T7 (Grammy):** Solo se dividen colaboraciones de Grammy en aquellos casos donde el nombre individual de la colaboración tiene evidencia probada dentro de Spotify; de lo contrario, el nombre de la banda/grupo se mantiene entero.
+
+* **T8 (Miembros Especiales):** Los premios sin artista se mapean a `__unknown__` (clave `-1`); y los artistas ficticios ("Various Artists") se mapean al registro `__placeholder__` (clave `-2`). Esto protege los KPIs de falsas popularidades.
+
+* **T9 (Contrato de Integración):** Al carecer de un ID relacional compartido, la integración se logra usando una clave normalizada **NFKD** (minúsculas, sin acentos ni signos) del nombre del artista.
+
+* **T12:** Las pistas con popularidad `0` no son eliminadas, sino cargadas a la tabla de hechos.
+
+* **T13:** Se elimina el campo redundante `winner` (siempre `True`) y el DW simplemente suma la presencia del evento mediante un contador `award_count`.
+
+## 9. Modelo Dimensional (Star Schema)
+
+El Data Warehouse (`music_dw`) se basa en un modelo en estrella, modelado bajo dos hechos vinculados únicamente por la dimensión confluente `dim_artist` (para no multiplicar artificialmente los premios con las canciones).
+
+```mermaid
+erDiagram
+    DIM_ARTIST ||--o{ FACT_TRACK_CREDIT : "artist_key"
+    DIM_ARTIST ||--o{ FACT_GRAMMY_AWARD : "artist_key"
+    DIM_TRACK  ||--o{ FACT_TRACK_CREDIT : "track_key"
+    DIM_GENRE  ||--o{ FACT_TRACK_CREDIT : "genre_key"
+    DIM_CATEGORY ||--o{ FACT_GRAMMY_AWARD : "category_key"
+    DIM_YEAR   ||--o{ FACT_GRAMMY_AWARD : "year_key"
+
+    DIM_ARTIST {
+        int artist_key PK
+        text artist_match_key UK
+        text artist_name
+        text artist_type
+        bool has_spotify_tracks
+        bool has_grammy_awards
+    }
+    DIM_TRACK {
+        int track_key PK
+        text track_id UK
+        text track_name
+        text album_name
+        bool explicit
+        int duration_ms
+    }
+    DIM_GENRE {
+        int genre_key PK
+        text genre_name UK
+    }
+    DIM_CATEGORY {
+        int category_key PK
+        text category_name UK
+    }
+    DIM_YEAR {
+        smallint year_key PK
+        smallint decade
+        text ceremony_title
+    }
+    FACT_TRACK_CREDIT {
+        bigint track_credit_key PK
+        int track_key FK
+        int artist_key FK
+        int genre_key FK
+        smallint popularity
+        numeric danceability
+        numeric energy
+        numeric valence
+        numeric acousticness
+    }
+    FACT_GRAMMY_AWARD {
+        bigint award_credit_key PK
+        int award_id "degenerate"
+        int artist_key FK
+        int category_key FK
+        smallint year_key FK
+        text nominee "degenerate"
+        smallint award_count
+    }
+
 ```
 
----
+## 10. Diseño del DAG (Airflow)
 
-## 5. Instrucciones de Ejecución
+El DAG `reliable_music_pipeline` de **Airflow 3.1.8** fue escrito utilizando TaskFlow API para promover una orquestación clara. La estructura es:
+
+1. Extracciones en paralelo (`extract_spotify`, `extract_grammys`).
+
+2. Pasarelas crudas en paralelo (`validate_raw_spotify`, `validate_raw_grammys`).
+
+3. Convergencia de ramas en el nodo de transformación: `transform_and_integrate`.
+
+4. Validación final de los 4 datasets generados: `validate_prepared`.
+
+5. Carga dimensional en base de datos: `load_dw`.
+
+## 11. Política de Fallos y Reintentos
+
+La configuración del pipeline, evidenciada en `dags/reliable_music_pipeline.py`, aplica políticas diferenciadas de reintentos:
+
+| Condición (Tipo de Falla) | Severidad | Respuesta del Pipeline | ¿Reintento? | Justificación |
+| --- | --- | --- | --- | --- |
+| **Problemas Red/DB (Transient)** | Alta | Falla la tarea de extracción (`extract_*`) o carga (`load_dw`). | **Sí (`retries=2`)** | Un fallo de conexión operacional o del Data Warehouse es temporal. Puede resolverse en segundos. |
+| **Regla DQ Fallida (Deterministic)** | Critical (DQ01-04, 08-12, 14-19) | Detención inmediata (STOP) lanzando un `DataQualityError`. | **No (`retries=0`)** | Una falla de esquema, valores atípicos o error en la lógica de transformación no cambiará ejecutando el código nuevamente sin arreglar los datos crudos. |
+| **Alerta Calidad de Datos (Warning)** | Warning (DQ05, DQ06, DQ13, DQ20) | Mensaje de Warning registrado en el JSON y Airflow (CONTINUE). | **No** | No detiene el flujo; solo requiere observabilidad. |
+
+## 12. Evidencia de Ejecución Exitosa (Test A)
+
+El pipeline ha demostrado ejecutarse de forma exitosa (`test_a_success.png`). Al utilizar una versión limpia de datos, la vista "Graph" de Airflow expone las 7 tareas (`extract`, validaciones crudas, transformación, validación final, carga) en estado **`success` (verde)**, orquestando el cargue al entorno `music_dw` sin incidentes.
+
+## 13. Evidencia de Falla Controlada (Test B)
+
+El modelo prevé detener el flujo de datos si las reglas vitales se rompen (`test_b_failure.png`). Al inyectar de manera intencional una pista con `popularity = 150` (que viola la regla *DQ03: popularity <= 100*) en `spotify_bad.csv`, la tarea `validate_raw_spotify` cae inmediatamente en estado **`failed` (rojo)**. Como resultado, las tareas subsecuentes (`transform_and_integrate`, `validate_prepared`, `load_dw`) quedan bloqueadas por dependencia en estado **`upstream_failed` (naranja)**, evitando que datos contaminados ingresen a la BD destino.
+
+## 14. Estrategia de Repetibilidad (Safe Rerun)
+
+La operación `load_dw` se diseñó para ser idempotente, lo que significa que un reintento manual (Safe Rerun) del lote no duplicará información.
+
+* **Dimensiones:** Usan la cláusula `UPSERT` (inserción con `ON CONFLICT DO UPDATE` respecto a la *business key*).
+
+* **Hechos (Facts):** Se gestionan mediante el patrón transaccional `Truncate-and-Load` envuelto en un `BEGIN ... COMMIT`.
+
+* **Resultado de prueba (docs/evidence/rerun/rerun_comparison.md):**
+
+| Entidad | Conteo (Antes del Rerun) | Conteo (Después del Rerun) |
+| --- | --- | --- |
+| `dim_artist` | 30,763 filas | 30,763 filas |
+| `fact_track_credit` | 157,531 filas | 157,531 filas |
+
+## 15. Dashboard y Salidas Analíticas
+
+Los resultados descriptivos obtenidos usando las vistas de `kpi_queries.sql` arrojan las siguientes respuestas en proceso de ser visualizadas (Dashboard en Power BI: *En proceso*):
+
+* **R1 (Popularidad Media):** Excluyendo pistas nulas (0), la popularidad promedio en Spotify de artistas con premios Grammy es **43.42** vs **37.11** de los artistas no ganadores. Representan el 9.36% del catálogo.
+
+* **R2 (Concurrencia de Géneros):** Los géneros con más alta cuota de artistas premiados son el Rock (29.18%), Country (27.73%) y Soul (27.22%).
+
+* **R3 (Top):** El ranking general está liderado por *Aretha Franklin*, *Ray Charles* y *U2* (18 premios cada uno), aunque Beyoncé registra la media de popularidad en Spotify más alta del Top 10 (72.83).
+
+## 16. Instrucciones de Instalación y Ejecución
 
 ### Prerrequisitos
-- Python 3.12+ con entorno virtual activado.
-- PostgreSQL en ejecución (puerto 5433 en host local o 5432 en Docker) con usuario `etl_user`.
-- Archivo `.env` configurado en la raíz con las credenciales correspondientes:
-  ```env
-  ANALYTICS_PG_HOST_PORT=5433
-  ANALYTICS_PG_USER=etl_user
-  ANALYTICS_PG_PASSWORD=etl_password
-  ```
 
-### Paso 1: Configurar el entorno e instalar dependencias
+1. Python 3.12+.
+
+2. Archivo `.env` en el root con las variables de base de datos origen/destino:
+
+```env
+ANALYTICS_PG_HOST_PORT=5433
+ANALYTICS_PG_USER=etl_user
+ANALYTICS_PG_PASSWORD=etl_password
+
+```
+
+### Entorno Virtual y Base de Datos (PostgreSQL)
+
 ```bash
+# Crear entorno virtual e instalar los paquetes
 python -m venv venv
-# En Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# En Linux/Mac:
+# PowerShell Windows: .\venv\Scripts\Activate.ps1
 source venv/bin/activate
-
 pip install -r requirements.txt
+
+# Subir los 4810 datos históricos fuente a PostgreSQL (Puerto 5433)
+python src/load_grammy_source.py
+
+# Crear esquema DW estrella y Vistas de KPI en music_dw
+python -c "from src import config; import psycopg2; conn = psycopg2.connect(**config.pg_params('music_dw')); cur = conn.cursor(); cur.execute((config.SQL_DIR / 'dw_schema.sql').read_text(encoding='utf-8')); cur.execute((config.SQL_DIR / 'kpi_queries.sql').read_text(encoding='utf-8')); conn.commit(); conn.close(); print('Esquema creado')"
+
 ```
 
-### Paso 2: Inicializar la base de datos fuente y el esquema del Data Warehouse
-1. Cargar la tabla fuente relacional de Grammy (puerto 5433):
-   ```bash
-   python src/load_grammy_source.py
-   ```
-2. Inicializar el esquema dimensional `dw` y las vistas KPI en `music_dw`:
-   ```bash
-   # Vía psql o ejecutando el script localmente:
-   python -c "from src import config; import psycopg2; conn = psycopg2.connect(**config.pg_params('music_dw')); cur = conn.cursor(); cur.execute((config.SQL_DIR / 'dw_schema.sql').read_text(encoding='utf-8')); cur.execute((config.SQL_DIR / 'kpi_queries.sql').read_text(encoding='utf-8')); conn.commit(); conn.close(); print('Esquema y vistas creados exitosamente.')"
-   ```
+### Ejecutar Airflow con Docker Compose
 
-### Paso 3: Ejecución Local de Punta a Punta
-Para ejecutar las 6 etapas secuenciales del pipeline (`extract` -> `validate_raw` -> `transform` -> `validate_prepared` -> `load_dw`):
 ```bash
-python -m src.run_local_pipeline
+# Iniciar infraestructura
+docker compose build
+docker compose up airflow-init
+docker compose up -d
+
 ```
-*Opcional:* Si desea omitir la escritura al Data Warehouse y solo validar la preparación:
-```bash
-python -m src.run_local_pipeline --skip-load
-```
 
----
+El panel de control es accesible desde `http://localhost:8080` donde puede ejecutarse un "Trigger" manual del DAG.
 
-## 6. Ejecución en Apache Airflow (Docker) y Pruebas de Calidad
+## 17. Supuestos y Limitaciones
 
-### Ejecución del DAG en Airflow
-1. Iniciar el stack de Airflow (Airflow 3.1.8).
-2. Asegurar que la carpeta del proyecto esté montada en `/opt/airflow`.
-3. Ingresar a la interfaz web de Airflow (`http://localhost:8080`), habilitar el DAG `reliable_music_pipeline` y ejecutarlo manualmente (**Trigger DAG**).
-4. El pipeline completará exitosamente las etapas:
-   ```
-   extract_spotify  ───► validate_raw_spotify  ──┐
-   extract_grammys  ───► validate_raw_grammys  ──┴──► transform_and_integrate ──► validate_prepared ──► load_dw
-   ```
+Las lógicas de cruce presentan limitaciones asumidas descritas en el contrato de integración (`docs/transformation_decisions.md`):
 
-### Simulación de Falla Crítica Controlada (Test B)
-Para validar que el pipeline es confiable y que las fallas de severidad **Critical** detienen la ejecución protegiendo el Data Warehouse:
+* **Integración por string:** Al carecer de un ID relacional que conecte Spotify con Grammy, el puente entre fuentes asume que artistas con el mismo nombre normalizado NFKD son la misma persona. Homónimos causarán traslapes de KPIs, y variaciones ortográficas mayores generarán nulos.
 
-1. **Generar el dataset corrupto:**
-   Ejecutar el script que inyecta valores fuera de dominio (`popularity = 150`, violando la regla **DQ03**):
-   ```bash
-   python -m src.controlled_failure
-   ```
-   *(Crea `data/raw/spotify_bad.csv` sin tocar el archivo original).*
+* **El dilema del 0:** Una canción de Spotify en 0 en popularidad (RK15) representa carencia total de streaming. Pese a distorsionar las medias, se mantuvieron en la DB y el filtrado ocurre a nivel de la vista SQL para mantener integridad de catálogo.
 
-2. **Probar localmente:**
-   ```bash
-   python -m src.run_local_pipeline --bad
-   ```
-   *Resultado esperado:* Se lanza `DataQualityError: spotify_raw: Critical rule(s) failed ['DQ03']`, deteniendo el proceso inmediatamente antes de la transformación.
-
-3. **Demostración en Airflow (Captura de pantalla requerida):**
-   - En `dags/reliable_music_pipeline.py`, cambiar la variable de configuración:
-     ```python
-     # SPOTIFY_FILENAME = "spotify_dataset.csv"   # Línea original
-     SPOTIFY_FILENAME = "spotify_bad.csv"         # Activar para Test B
-     ```
-   - Disparar el DAG en la interfaz web de Airflow.
-   - La tarea `validate_raw_spotify` fallará y se pondrá en **rojo (failed)**.
-   - Las tareas subsecuentes `transform_and_integrate`, `validate_prepared` y `load_dw` quedarán en estado **upstream_failed**, garantizando que ningún dato corrupto ingrese a `music_dw`.
-   - Tomar la captura de pantalla en la vista Grid/Graph de Airflow.
-   - Restaurar `SPOTIFY_FILENAME = "spotify_dataset.csv"`.
-
----
-
-## 7. Resultados Analíticos y Verificación de KPIs
-
-Las consultas de `sql/kpi_queries.sql` fueron verificadas directamente contra la base de datos `music_dw`:
-
-### KPI-1a: Popularidad por Grupo de Artista (`dw.vw_kpi_1a_popularity_by_grammy`)
-| Grupo de Artistas | Artistas Únicos | Pares Artista-Pista | Popularidad Media Global | Popularidad Media (excl. 0) | % Pistas con Popularidad 0 |
-|---|---|---|---|---|---|
-| **Non-Grammy artist** | 29,024 | 114,115 | 33.49 | 37.11 | 9.77% |
-| **Grammy artist** | 717 | 9,308 | 32.84 | **43.42** | 24.37% |
-
-*Hallazgo clave:* Al excluir las pistas con popularidad 0 (que reflejan ausencia de reproducciones o temas de archivo), los artistas con reconocimiento Grammy tienen en promedio **6.31 puntos más de popularidad** en Spotify que los no premiados.
-
-### KPI-1b: Participación en el Catálogo (`dw.vw_kpi_1b_catalog_share`)
-- **Pistas con artista Grammy:** 8,397 de 89,741 pistas únicas (**9.36% del catálogo de Spotify**).
-
-### KPI-2a: Concentración de Artistas Grammy por Género (`dw.vw_kpi_2a_grammy_artists_by_genre`)
-- **Top 5 géneros con mayor concentración de artistas premiados:**
-  1. **Rock:** 29.18% (75 de 257 artistas)
-  2. **Country:** 27.73% (71 de 256 artistas)
-  3. **Soul:** 27.22% (86 de 316 artistas)
-  4. **Dance:** 21.02% (62 de 295 artistas)
-  5. **Jazz:** 19.50% (55 de 282 artistas)
-
-### KPI-3: Top 10 Artistas Más Premiados (`dw.vw_kpi_3_artist_ranking`)
-| Artista | Premios Grammy | Categorías Distintas | Período de Premiación | Pistas en Spotify | Popularidad Media Spotify |
-|---|---|---|---|---|---|
-| **Aretha Franklin** | 18 | 9 | 1967 – 2007 | 8 | 42.00 |
-| **Ray Charles** | 18 | 14 | 1960 – 2005 | 9 | 60.29 |
-| **U2** | 18 | 9 | 1987 – 2005 | 0 *(fuera de muestra)* | N/A |
-| **Tony Bennett** | 18 | 7 | 1962 – 2015 | 17 | 38.67 |
-| **Stevie Wonder** | 17 | 9 | 1973 – 2006 | 89 | 20.44 |
-| **Vince Gill** | 17 | 6 | 1990 – 2008 | 5 | 1.00 |
-| **Beyoncé** | 17 | 13 | 2003 – 2019 | 3 | **72.83** |
-| **Jay-Z** | 16 | 7 | 1998 – 2014 | 3 | 53.33 |
-| **Alison Krauss** | 16 | 11 | 1990 – 2008 | 8 | 50.75 |
-| **B.B. King** | 15 | 7 | 1970 – 2008 | 13 | 55.89 |
+* **Créditos Genéricos:** Valores de premios asociados a "(Various Artists)" o "Original Cast" en la fuente Grammy (RK25) no contabilizan métricas individuales. Se configuraron como `__placeholder__` (`-2`) para no alterar los ranking.
