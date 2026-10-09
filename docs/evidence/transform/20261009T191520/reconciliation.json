@@ -1,0 +1,65 @@
+{
+  "batch_id": "20261009T191520",
+  "spotify_raw_rows": 114000,
+  "grammy_raw_rows": 4810,
+  "spotify_exact_duplicates_removed": 450,
+  "spotify_duration_set_null": 1,
+  "spotify_credit_duplicates_removed": 0,
+  "spotify_tracks_with_inconsistent_attributes": 0,
+  "grammy_credit_duplicates_removed": 2,
+  "grammy_artist_split_modes": {
+    "whole_match": 1324,
+    "split": 344,
+    "kept_unsplit": 1233,
+    "unknown": 1840,
+    "generic": 69
+  },
+  "invariants": {
+    "tracks_preserved": true,
+    "genres_preserved": true,
+    "awards_preserved": true,
+    "artist_key_unique": true,
+    "every_credit_key_in_dim": true,
+    "one_ceremony_title_per_year": true,
+    "grammy_unknown_equals_source_nulls": true,
+    "spotify_unknown_equals_source_nulls": true
+  },
+  "integration": {
+    "spotify_real_artist_keys": 29741,
+    "grammy_real_artist_keys": 1737,
+    "matched_keys": 717,
+    "pct_grammy_keys_matched": 41.28,
+    "award_credits_total": 5378,
+    "award_credits_unknown": 1840,
+    "award_credits_placeholder": 76,
+    "award_credits_real": 3462,
+    "award_credits_real_matched": 1894,
+    "pct_real_award_credits_matched": 54.71,
+    "spotify_tracks_with_grammy_artist": 8397,
+    "spotify_tracks_total": 89741,
+    "unmatched_top_artists": {
+      "U2": 18,
+      "Jimmy Sturr": 12,
+      "Dixie Chicks": 12,
+      "CeCe Winans": 11,
+      "Pat Metheny Group": 10,
+      "Shirley Caesar": 10,
+      "Bill Cosby": 9,
+      "Asleep At The Wheel": 8,
+      "Chick Corea": 8,
+      "The Manhattan Transfer": 8,
+      "Henry Mancini": 8,
+      "Take 6": 8,
+      "Los Tigres Del Norte": 7,
+      "Chet Atkins": 7,
+      "Kentucky Thunder": 7
+    },
+    "duplicate_match_keys_in_dim": 0
+  },
+  "rows_out": {
+    "dim_artist": 30763,
+    "dim_track": 89741,
+    "track_credit": 157531,
+    "award_credit": 5378
+  }
+}

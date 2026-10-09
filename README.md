@@ -71,6 +71,39 @@ El pipeline de orquestación en Airflow sigue la siguiente arquitectura de depen
                  +-----------------------------------------------+
 
 ```
+### 4.1 Estructura del Repositorio
+
+```text
+ETL_2026-2_Workshop-2/
+├── dags/
+│   └── reliable_music_pipeline.py    # DAG de Airflow 3.1.8 (TaskFlow API, gates, reintentos)
+├── data/
+│   ├── raw/
+│   │   ├── spotify_dataset.csv       # Archivo crudo fuente de Spotify
+│   │   └── the_grammy_awards.csv     # CSV original usado para inicializar la BD relacional
+│   └── staging/                      # Parquet por lote intercambiado entre tareas (ignorado en git)
+├── docs/
+│   ├── evidence/                     # Evidencias generadas de profiling, transform y validation
+│   ├── quality_rules.md              # Catálogo formal de reglas DQ01-DQ20
+│   ├── requirements.md               # Definición formal de alcance analítico y requerimientos
+│   └── transformation_decisions.md   # Registro de decisiones de ingeniería T1-T13
+├── sql/
+│   ├── dw_schema.sql                 # DDL del modelo estrella en PostgreSQL (esquema 'dw')
+│   ├── kpi_queries.sql               # Vistas SQL analíticas para KPIs de R1, R2 y R3
+│   └── source_setup.sql              # DDL de la BD operacional de origen de Grammy
+├── src/
+│   ├── config.py                     # Configuración de rutas y conexiones DB (híbrido local/Docker)
+│   ├── controlled_failure.py         # Generador de datos corruptos para Test B (falla controlada)
+│   ├── extract.py                    # Extracción desacoplada hacia staging Parquet
+│   ├── load.py                       # Carga a DW: UPSERT en dimensiones y Truncate-and-Load en facts
+│   ├── load_grammy_source.py         # Inicialización de la BD fuente operacional (Postgres)
+│   ├── run_local_pipeline.py         # Ejecución local de punta a punta (6 etapas)
+│   ├── run_validation_checks.py      # Batería de pruebas de validación cruda (escenarios A, B, C)
+│   ├── transform.py                  # Lógica de transformación, integración y reconciliación
+│   └── validation.py                 # Suites Great Expectations y ejecución de checkpoints
+└── requirements.txt                  # Dependencias del proyecto
+
+```
 
 ## 5. Hallazgos del Perfilamiento de Datos
 
