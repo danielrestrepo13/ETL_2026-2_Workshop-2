@@ -1,0 +1,46 @@
+{
+  "run_label": "20261009T053858",
+  "dataset": "prepared_award_credit",
+  "validated_at_utc": "2026-10-09T05:39:06+00:00",
+  "rows": 5378,
+  "overall_success": true,
+  "pipeline_action": "CONTINUE",
+  "failed_critical": 0,
+  "failed_warning": 0,
+  "failed_info": 0,
+  "checks": [
+    {
+      "rule_id": "DQ16",
+      "expectation": "ExpectCompoundColumnsToBeUnique",
+      "target": [
+        "award_id",
+        "artist_match_key"
+      ],
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ17",
+      "expectation": "ExpectColumnValuesToNotBeNull",
+      "target": "artist_match_key",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ20",
+      "expectation": "ExpectColumnMeanToBeBetween",
+      "target": "matched_in_spotify",
+      "severity": "warning",
+      "success": true,
+      "unexpected_count": null,
+      "unexpected_percent": null,
+      "observed_value": "0.5470826112073945"
+    }
+  ]
+}

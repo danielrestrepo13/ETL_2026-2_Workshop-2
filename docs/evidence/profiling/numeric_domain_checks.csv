@@ -1,0 +1,11 @@
+,rows,pct
+popularity outside 0-100,0,0.0
+popularity == 0,16020,14.05
+duration_ms <= 0,1,0.0
+duration_ms > 20 min,81,0.07
+tempo == 0,157,0.14
+time_signature outside 3-7,1136,1.0
+loudness > 0 dB,90,0.08
+key outside 0-11,0,0.0
+"mode not in {0,1}",0,0.0
+"any audio feature outside [0,1]",0,0.0

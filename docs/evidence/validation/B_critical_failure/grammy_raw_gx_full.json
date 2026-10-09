@@ -1,0 +1,257 @@
+{
+  "success": false,
+  "statistics": {
+    "evaluated_validations": 1,
+    "success_percent": 0.0,
+    "successful_validations": 0,
+    "unsuccessful_validations": 1
+  },
+  "validation_results": [
+    {
+      "success": false,
+      "statistics": {
+        "evaluated_expectations": 6,
+        "successful_expectations": 5,
+        "unsuccessful_expectations": 1,
+        "success_percent": 83.33333333333334
+      },
+      "expectations": [
+        {
+          "expectation_type": "expect_table_columns_to_match_set",
+          "success": true,
+          "kwargs": {
+            "batch_id": "grammy_raw_pandas_source-grammy_raw",
+            "column_set": [
+              "source_row_id",
+              "title",
+              "year",
+              "category",
+              "nominee",
+              "artist",
+              "winner"
+            ],
+            "exact_match": false
+          },
+          "result": {
+            "observed_value": [
+              "artist",
+              "category",
+              "img",
+              "nominee",
+              "published_at",
+              "source_row_id",
+              "title",
+              "updated_at",
+              "winner",
+              "workers",
+              "year"
+            ],
+            "details": {
+              "mismatched": {
+                "unexpected": [
+                  "img",
+                  "published_at",
+                  "updated_at",
+                  "workers"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_unique",
+          "success": true,
+          "kwargs": {
+            "batch_id": "grammy_raw_pandas_source-grammy_raw",
+            "column": "source_row_id"
+          },
+          "result": {
+            "element_count": 4810,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "grammy_raw_pandas_source-grammy_raw",
+            "column": "year",
+            "min_value": 1950.0,
+            "max_value": 2100.0
+          },
+          "result": {
+            "element_count": 4810,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": true,
+          "kwargs": {
+            "batch_id": "grammy_raw_pandas_source-grammy_raw",
+            "column": "category"
+          },
+          "result": {
+            "element_count": 4810,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_in_set",
+          "success": false,
+          "kwargs": {
+            "batch_id": "grammy_raw_pandas_source-grammy_raw",
+            "column": "winner",
+            "value_set": [
+              true
+            ]
+          },
+          "result": {
+            "element_count": 4810,
+            "unexpected_count": 50,
+            "unexpected_percent": 1.0395010395010396,
+            "partial_unexpected_list": [
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 1.0395010395010396,
+            "unexpected_percent_nonmissing": 1.0395010395010396,
+            "partial_unexpected_counts": [
+              {
+                "value": false,
+                "count": 20
+              }
+            ],
+            "partial_unexpected_index_list": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19
+            ]
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": true,
+          "kwargs": {
+            "batch_id": "grammy_raw_pandas_source-grammy_raw",
+            "column": "artist",
+            "mostly": 0.5
+          },
+          "result": {
+            "element_count": 4810,
+            "unexpected_count": 1840,
+            "unexpected_percent": 38.25363825363826,
+            "partial_unexpected_list": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "partial_unexpected_counts": [
+              {
+                "value": null,
+                "count": 20
+              }
+            ],
+            "partial_unexpected_index_list": [
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              77,
+              78,
+              79,
+              80
+            ]
+          }
+        }
+      ],
+      "result_url": null
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+attribute,distinct,distinct_after_trim_casefold,labels_that_collapse,values_with_extra_spaces
+Spotify.track_genre,114,114,0,0
+Spotify.album_name,46589,46155,434,0
+Grammy.category,638,629,9,0
+Grammy.artist,1658,1656,2,0
+Grammy.nominee,4131,4130,1,0
+Grammy.title,62,62,0,0

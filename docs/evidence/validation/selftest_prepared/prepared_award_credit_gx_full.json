@@ -1,0 +1,74 @@
+{
+  "success": false,
+  "statistics": {
+    "evaluated_validations": 1,
+    "success_percent": 0.0,
+    "successful_validations": 0,
+    "unsuccessful_validations": 1
+  },
+  "validation_results": [
+    {
+      "success": false,
+      "statistics": {
+        "evaluated_expectations": 3,
+        "successful_expectations": 2,
+        "unsuccessful_expectations": 1,
+        "success_percent": 66.66666666666666
+      },
+      "expectations": [
+        {
+          "expectation_type": "expect_compound_columns_to_be_unique",
+          "success": true,
+          "kwargs": {
+            "batch_id": "prepared_award_credit_pandas_source-prepared_award_credit",
+            "column_list": [
+              "award_id",
+              "artist_match_key"
+            ]
+          },
+          "result": {
+            "element_count": 60,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": true,
+          "kwargs": {
+            "batch_id": "prepared_award_credit_pandas_source-prepared_award_credit",
+            "column": "artist_match_key"
+          },
+          "result": {
+            "element_count": 60,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_mean_to_be_between",
+          "success": false,
+          "kwargs": {
+            "batch_id": "prepared_award_credit_pandas_source-prepared_award_credit",
+            "column": "matched_in_spotify",
+            "min_value": 0.33
+          },
+          "result": {
+            "observed_value": 0.0
+          }
+        }
+      ],
+      "result_url": null
+    }
+  ]
+}

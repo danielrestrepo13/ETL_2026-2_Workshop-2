@@ -1,0 +1,12 @@
+# Installed in the Airflow image (see Dockerfile). Airflow itself is pinned there.
+# pandas, SQLAlchemy and psycopg2 already ship with the Airflow image; listed for clarity.
+great-expectations==1.23.2
+pandas
+sqlalchemy
+psycopg2-binary
+pyarrow
+fastparquet
+
+# Profiling and notebook execution tools
+matplotlib
+ipykernel

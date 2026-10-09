@@ -1,0 +1,8 @@
+{
+  "batch_id": "20261008T062543",
+  "dataset": "spotify_raw",
+  "path": "/opt/airflow/data/staging/20261008T062543/spotify_raw.parquet",
+  "rows": 114000,
+  "source": "CSV file spotify_bad.csv",
+  "source_sha256": "4b9dd3aec904b527b58d2372ded44396475e57be0eb7ca2ad9689f99adc7bb1a"
+}

@@ -1,0 +1,53 @@
+{
+  "run_label": "20261007T222256",
+  "dataset": "prepared_dim_artist",
+  "validated_at_utc": "2026-10-07T22:23:11+00:00",
+  "rows": 30763,
+  "overall_success": true,
+  "pipeline_action": "CONTINUE",
+  "failed_critical": 0,
+  "failed_warning": 0,
+  "failed_info": 0,
+  "checks": [
+    {
+      "rule_id": "DQ14",
+      "expectation": "ExpectColumnValuesToBeUnique",
+      "target": "artist_match_key",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ17",
+      "expectation": "ExpectColumnValuesToNotBeNull",
+      "target": "artist_match_key",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ17",
+      "expectation": "ExpectColumnValuesToBeInSet",
+      "target": "artist_type",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ19",
+      "expectation": "ExpectColumnSumToBeBetween",
+      "target": "grammy_spotify_overlap",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": null,
+      "unexpected_percent": null,
+      "observed_value": "717"
+    }
+  ]
+}

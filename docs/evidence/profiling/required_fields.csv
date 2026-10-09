@@ -1,0 +1,7 @@
+Requirement,Source,Required fields,All present,Missing
+R1,Spotify,"artists, popularity, track_id",True,
+R1,Grammy,artist,True,
+R2,Spotify,"track_genre, danceability, energy, valence, acousticness",True,
+R2,Grammy,artist,True,
+R3,Spotify,"track_id, popularity, artists",True,
+R3,Grammy,"artist, category, year",True,

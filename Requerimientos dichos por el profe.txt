@@ -1,0 +1,16 @@
+Requerimientos:
+Definir 3 requerimientos, tienen que utilizar la información de los 2 datasets. Pueden ser básicos o complejos, pero deben utilizar información de ambos
+
+Va a evaluar todo el proceso de ingeniería que se lleve a cabo para desarrollarlo.
+
+Implementar una estrategia para que no se dupliquen los datos cada vez que corra el pipeline. 
+
+Documentar y defender todas las soluciones de ingeniería con el diseño e implementación que se realizo
+
+*La fuente de datos de Spotify se conservara como un csv
+*La fuente de datos de los Grammy se cargaran previamente en una base de datos y después esa será la fuente de información de donde se leyera la información.
+
+La base de datos habitaría donde esta el contenedor que tenemos para el workshop
+
+Una vez tenga definidos los requerimientos, para garantizar la calidad, debo necesitas mínimo 6 reglas de calidad. 
+

@@ -1,0 +1,9 @@
+,tracks per matched artist,awards per matched artist
+count,540.0,540.0
+mean,13.4,2.6
+std,24.9,3.6
+min,1.0,1.0
+25%,2.0,1.0
+50%,5.0,1.0
+75%,14.0,3.0
+max,332.0,66.0

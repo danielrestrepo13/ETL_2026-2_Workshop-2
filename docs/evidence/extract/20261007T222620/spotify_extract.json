@@ -1,0 +1,8 @@
+{
+  "batch_id": "20261007T222620",
+  "dataset": "spotify_raw",
+  "path": "C:\\Users\\Daniel\\Desktop\\UAO\\V Semestre\\ETL\\ETL_2026-2_Workshop-2\\data\\staging\\20261007T222620\\spotify_raw.parquet",
+  "rows": 114000,
+  "source": "CSV file spotify_dataset.csv",
+  "source_sha256": "b202fa49909b2d5cef71a04b1d21243cfeb36414535f2ca9272aa646721177bd"
+}

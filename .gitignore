@@ -1,0 +1,83 @@
+# ==============================================================================
+# .gitignore - Workshop 2: Building a Reliable Batch Data Pipeline (ETL UAO)
+# ==============================================================================
+
+# --------------------------------------------------
+# 1. Variables de entorno y credenciales (Seguridad)
+# --------------------------------------------------
+.env
+.env.local
+.env.*
+!.env.example
+
+# --------------------------------------------------
+# 2. Entornos virtuales de Python
+# --------------------------------------------------
+venv/
+.venv/
+env/
+ENV/
+venv.bak/
+
+# --------------------------------------------------
+# 3. Caché y compilados de Python
+# --------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# --------------------------------------------------
+# 4. Datos temporales y staging
+# --------------------------------------------------
+# Handoff Parquet entre tareas (no deben versionarse en Git)
+data/staging/
+data/staging/*
+!data/staging/.gitkeep
+
+# Archivos de datos crudos pesados / corruptos de prueba
+# (spotify_bad.csv generado por Test B y/o CSV de 20MB según preferencia)
+data/raw/spotify_*.csv
+# Si deseas versionar el spotify_dataset.csv original y solo ignorar el corrupto,
+# puedes descomentar la siguiente línea:
+!data/raw/spotify_dataset.csv
+
+# --------------------------------------------------
+# 5. Logs y runtime de Airflow
+# --------------------------------------------------
+logs/
+*.log
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+
+# --------------------------------------------------
+# 6. Jupyter Notebooks y checkpoints
+# --------------------------------------------------
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# --------------------------------------------------
+# 7. Editores e IDEs
+# --------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --------------------------------------------------
+# 8. Archivos del Sistema Operativo y temporales Office
+# --------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+~WRL*.tmp
+
+# --------------------------------------------------
+# 9. Respaldos internos, plantillas, pruebas y dashboards de Power BI
+# --------------------------------------------------
+_backup_pre_final/
+_template/
+.pytest_cache/
+*.pbix

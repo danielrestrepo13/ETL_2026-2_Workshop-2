@@ -1,0 +1,10 @@
+metric,value
+Grammy distinct artist keys,1643.0
+Spotify distinct artist keys,29742.0
+Matching keys,540.0
+% Grammy artist keys found in Spotify,32.87
+% Grammy rows (with artist) matched,46.8
+% Grammy rows overall matched,28.9
+Spotify distinct tracks,89741.0
+Spotify tracks by a Grammy artist,6801.0
+% Spotify tracks linked to a Grammy artist,7.58

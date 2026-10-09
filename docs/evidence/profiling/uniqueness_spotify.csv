@@ -1,0 +1,9 @@
+metric,value
+rows,114000
+distinct track_id,89741
+extra rows repeating a track_id,24259
+"extra rows repeating (track_id, track_genre)",450
+fully duplicated rows,450
+track_id with >1 distinct popularity value,720
+track_id appearing in >1 genre,16299
+songs (name+artists) with >1 track_id,4747

@@ -1,0 +1,11 @@
+{
+  "batch_id": "20261008T062543",
+  "dataset": "grammy_raw",
+  "path": "/opt/airflow/data/staging/20261008T062543/grammy_raw.parquet",
+  "rows": 4810,
+  "source": "PostgreSQL grammy_source.public.grammy_awards",
+  "query": "SELECT * FROM public.grammy_awards ORDER BY source_row_id",
+  "db_host": "analytics-postgres",
+  "db_port": 5432,
+  "grammy_csv_read": false
+}

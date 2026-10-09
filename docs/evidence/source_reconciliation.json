@@ -1,0 +1,71 @@
+{
+  "run_at_utc": "2026-10-07T21:30:55+00:00",
+  "csv_file": "the_grammy_awards.csv",
+  "csv_sha256": "bae3d6613cb39adb597bb8864fb294144bd55cb452557536f324020266727d88",
+  "target": "grammy_source.public.grammy_awards",
+  "reconciled": true,
+  "checks": {
+    "row_count": {
+      "csv": 4810,
+      "db": 4810,
+      "ok": true
+    },
+    "null_counts_per_column": {
+      "year": {
+        "csv": 0,
+        "db": 0,
+        "ok": true
+      },
+      "title": {
+        "csv": 0,
+        "db": 0,
+        "ok": true
+      },
+      "published_at": {
+        "csv": 0,
+        "db": 0,
+        "ok": true
+      },
+      "updated_at": {
+        "csv": 0,
+        "db": 0,
+        "ok": true
+      },
+      "category": {
+        "csv": 0,
+        "db": 0,
+        "ok": true
+      },
+      "nominee": {
+        "csv": 6,
+        "db": 6,
+        "ok": true
+      },
+      "artist": {
+        "csv": 1840,
+        "db": 1840,
+        "ok": true
+      },
+      "workers": {
+        "csv": 2190,
+        "db": 2190,
+        "ok": true
+      },
+      "img": {
+        "csv": 1367,
+        "db": 1367,
+        "ok": true
+      },
+      "winner": {
+        "csv": 0,
+        "db": 0,
+        "ok": true
+      }
+    },
+    "winner_true_count": {
+      "csv": 4810,
+      "db": 4810,
+      "ok": true
+    }
+  }
+}

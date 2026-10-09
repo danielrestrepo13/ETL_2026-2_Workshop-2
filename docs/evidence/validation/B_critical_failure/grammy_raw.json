@@ -1,0 +1,73 @@
+{
+  "run_label": "B_critical_failure",
+  "dataset": "grammy_raw",
+  "validated_at_utc": "2026-10-07T21:49:06+00:00",
+  "rows": 4810,
+  "overall_success": false,
+  "pipeline_action": "STOP",
+  "failed_critical": 1,
+  "failed_warning": 0,
+  "failed_info": 0,
+  "checks": [
+    {
+      "rule_id": "DQ08",
+      "expectation": "ExpectTableColumnsToMatchSet",
+      "target": "table",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": null,
+      "unexpected_percent": null,
+      "observed_value": "['artist', 'category', 'img', 'nominee', 'published_at', 'source_row_id', 'title', 'updated_at', 'winner', 'workers', 'year']"
+    },
+    {
+      "rule_id": "DQ09",
+      "expectation": "ExpectColumnValuesToBeUnique",
+      "target": "source_row_id",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ10",
+      "expectation": "ExpectColumnValuesToBeBetween",
+      "target": "year",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ11",
+      "expectation": "ExpectColumnValuesToNotBeNull",
+      "target": "category",
+      "severity": "critical",
+      "success": true,
+      "unexpected_count": 0,
+      "unexpected_percent": 0.0,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ12",
+      "expectation": "ExpectColumnValuesToBeInSet",
+      "target": "winner",
+      "severity": "critical",
+      "success": false,
+      "unexpected_count": 50,
+      "unexpected_percent": 1.0395010395010396,
+      "observed_value": null
+    },
+    {
+      "rule_id": "DQ13",
+      "expectation": "ExpectColumnValuesToNotBeNull",
+      "target": "artist",
+      "severity": "warning",
+      "success": true,
+      "unexpected_count": 1840,
+      "unexpected_percent": 38.25363825363826,
+      "observed_value": null
+    }
+  ]
+}

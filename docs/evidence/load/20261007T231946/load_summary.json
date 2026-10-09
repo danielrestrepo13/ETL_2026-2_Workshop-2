@@ -1,0 +1,16 @@
+{
+  "batch_id": "20261007T231946",
+  "loaded_at_utc": "2026-10-07T23:20:27+00:00",
+  "elapsed_s": 36.26,
+  "target_db": "music_dw",
+  "rows_loaded": {
+    "dim_artist": 261,
+    "dim_genre": 114,
+    "dim_track": 89741,
+    "dim_category": 638,
+    "dim_year": 62,
+    "fact_track_credit": 157531,
+    "fact_grammy_award": 5378
+  },
+  "validation_action_upstream": "CONTINUE"
+}

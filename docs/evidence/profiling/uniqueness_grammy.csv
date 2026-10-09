@@ -1,0 +1,5 @@
+metric,value
+rows,4810
+fully duplicated rows (excluding source_row_id),0
+"rows repeating ['year', 'category', 'nominee', 'artist']",0
+distinct ceremonies (title),62
